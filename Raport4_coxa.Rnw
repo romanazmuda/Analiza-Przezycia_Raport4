@@ -1,0 +1,297 @@
+\documentclass[12pt, a4paper]{article}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% dodatkowe pakiety LaTeX'a
+\usepackage[OT4]{polski}
+\usepackage[cp1250]{inputenc}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[colorlinks=true, linkcolor=blue]{hyperref}
+\usepackage{anyfontsize}
+\usepackage{bbm}
+\usepackage{amsmath}
+\usepackage{animate}
+\usepackage{Sweave}
+\graphicspath{{inst/extdata/}}
+\DeclareGraphicsExtensions{.pdf,.png}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% dodatkowe definicje œrodowisk
+\newtheorem{theorem}{Twierdzenie}
+\newtheorem{lemma}{Lemat}
+\newtheorem{corollary}{Wniosek}
+\newtheorem{proposition}{Propozycja}
+\newtheorem{remark}{Uwaga}
+\newtheorem{note}{Notka}
+\newtheorem{fact}{Fakt}
+\newtheorem{definition}{Definicja}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ustawienia globalne
+<<ustawienia_globalne, echo=FALSE>>=
+library(knitr)
+library(latex2exp)
+library(reliaR)
+library(binom)
+library(stats)
+library(NADA)
+library(survival)
+library(survminer)
+library(ggplot2)
+library(xtable) 
+library(dplyr)
+library(stringr)
+library(data.table)
+opts_chunk$set(fig.path='figure/', fig.align='center', fig.pos='H',fig.width=4, fig.height=3)
+
+@
+
+\begin{document}
+\SweaveOpts{concordance=TRUE}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% strona tytulowa
+\title{Analiza prze¿ycia\\
+Raport 4\\
+- \\
+Modele proporcjonalnych hazardów Coxa}
+\author{Romana ¯muda}
+\maketitle
+\newpage
+
+\tableofcontents 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Zadanie do sprawozdania - Czêœæ 1}
+\label{s:part1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Zadanie 1 - Metoda proporcjonalnych hazardów Coxa}
+W tej czêœci bêdziemy tworzyæ modele semiparametryczne. które ró¿ni¹ siê od modeli parametrycznych g³ównie tym, ¿e zawieraj¹ w swojej postaci dwa elementy: jeden parametryczny, a drugi nieparametryczny. S¹ one modelami poœrednimi miêdzy modelami “czysto” parametrycznymi, w których zak³ada siê szczególn¹ postaæ rozk³adu obserwowalnych zmiennych losowych, a modelami “czysto” nieparametrycznymi, w których nie przyjmuje siê ¿adnych za³o¿eñ dotycz¹cych postaci rozk³adu.
+
+Tak jak w poprzednim raporcie analizie poddamy zbiór danych \textsl{lung}, który dotyczy pacjentów z zaawansowanym rakiem p³uc. . Zbiór zawiera informacje o 228 pacjentach, których zbiór charakterystyk obejmuje 8 nastêpuj¹cych zmiennych:
+\begin{itemize}
+\item \textsl{inst} kod instytucji
+\item \textsl{time} czas prze¿ycia
+\item \textsl{status} cenzura (1. cenzura, 2. œmieræ)
+\item \textsl{age} wiek
+\item \textsl{sex} p³eæ (1. mê¿czyzna, 2. kobieta)
+\item \textsl{ph.ecog} skala sprawnoœci wg. lekarza (0-sprawnoœæ prawid³owa, 5-zgon) 
+\item \textsl{ph.karno} skala sprawnoœci wg. lekarza (sprawnoœæ prawid³owa - 100. zgon - 0)
+\item \textsl{pat.karno} skala sprawnoœæi wg. pacjenta 
+\item \textsl{meal.cal} kalorie na posi³ek
+\item \textsl{wt.loss} utrata masy cia³a w ci¹gu ostatnich 6 miesiêcy
+\end{itemize}
+Do modelu musimy za³o¿yæ, ¿e obserwowalne zmienne losowe maj¹ rozk³ady o ci¹g³ych i ró¿niczkowalnych dystrybuantach, a niektóre zmienne musz¹ byæ zmiennymi factor, poni¿ej utworzony model wykorzystuj¹c funkcjê \textsl{coxph} z pakietu \textsl{survival}:
+<<wgranie,echo=TRUE,warning=FALSE,>>=
+dane <- data.frame(lung)
+dane$status <- as.factor(dane$status)
+dane$ph.ecog <-as.factor(dane$ph.ecog)
+dane$ph.karno <- as.factor(dane$ph.karno)
+dane$sex <- as.factor(dane$sex)
+dane$pat.karno <- as.factor(dane$pat.karno)
+
+model1<-coxph(formula=Surv(time,status == 2) ~ age + sex + ph.ecog + ph.karno 
+              + pat.karno + meal.cal + wt.loss , data = dane)
+@
+Poni¿ej odpowiednie wartoœci do tworzenia modelu: 
+<<objasniajace,echo=TRUE,warning=FALSE,>>=
+#model1$coeff
+#summary(model1)
+@
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ Zmienna  &  Wartoœæ dopasowanych charakterystyk \\ 
+ age &   5.871e-03    \\
+ sex = 2 &   -6.082e-01    \\
+ ph.ecog = 1 & 6.397e-01    \\
+ ph.ecog = 2 & 1.320e+00    \\
+ ph.ecog = 3 & 2.554e+00    \\
+ ph.karno = 60 & 1.028e+00    \\
+ ph.karno = 70 & 1.003e+00    \\
+ ph.karno = 80 & 1.172e+00    \\
+ ph.karno = 90 & 1.314e+00    \\
+ ph.karno = 100 & 1.458e+00    \\
+ pat.karno = 40 & -3.519e-01    \\
+ pat.karno = 50 & 7.532e-01    \\
+ pat.karno = 60 & 1.228e-01   \\
+ pat.karno = 70 & -1.740e-01    \\
+ pat.karno = 80 & -2.811e-01   \\
+ pat.karno = 90 & -6.893e-02   \\
+ pat.karno = 100 & -5.681e-01    \\
+ meal.cal & -4.431e-05    \\  
+ wt.loss & -1.394e-02    \\
+   \hline
+\end{tabular}
+\end{table}
+\subsection{Zadanie 2 - Metoda proporcjonalnych hazardów Coxa z intepretacj¹}
+Jak w tytule zadania stworzymy model ze zmiennych: \textsl{sex}, \textsl{ph.ecog}, \textsl{ph.karno}, \textsl{pat.karno}, \textsl{wt.loss}.
+<<model1,echo=TRUE,warning=FALSE,>>=
+model2<-coxph(formula=Surv(time,status == 2) ~  sex + ph.ecog + ph.karno 
+              + pat.karno + wt.loss , data = dane)
+summary(model2)
+@
+SprawdŸmy teraz intepretacjê wspó³czynników przy zmiennych objaœniaj¹cych \textsl{sex}, \textsl{ph.ecog}. Jeœli zachoruje kobieta to jej szansa œmierci wynosi 0,513591, wiêc œmieræ mê¿czyzny jest prawie dwukrotnie wy¿sza ni¿ kobiety. Zmienn¹ referencyjn¹ dla ph.ecog jest wartoœæ wynosz¹c¹ 0. Zak³adaj¹c, ¿e wed³ug skali sprawnoœci wg lekarza ph.ecog, pacjent osi¹gnie ph.ecog = 1, to wtedy jego œmiertelnoœæ wzrasta o 1.681553, gdy ju¿ ph.ecog = 2 to œmiertelnoœæ wzrasta o  3.053463 - 1.681553, gdy osi¹gnie wartoœæ 3 wtedy œmiertelnoœæ wynosi prawie 14 razy wiêcej.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Zadanie do sprawozdania - Czêœæ 2}
+\label{s:part2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Zadanie 1 - Weryfikowanie istotnoœci zmiennej \textsl{meal.cal}}
+W tym zadaniu zbadamy, czy zmienna \textsl{meal.cal} jest nieisotna w modelu. W skrócie mamy zweryfikowaæ:
+\begin{itemize}
+\item $p > 0.05$ to znaczy, ¿e nie ma podstaw do odrzucenia hipotezy $H_0$, wtedy zmienna badana nie jest istotna w modelu
+\item $p < 0.05$ to znaczy, ¿e zmienna jest istotna w modelu
+\end{itemize}
+Skoro ju¿ wiemy, na co musimy zwróciæ uwagê to zbudujmy nasz model i sprawdŸmy istotnoœæ zmiennej.
+<<model_meal.cox,echo=TRUE,warning=FALSE>>=
+dane <- data.frame(lung)
+dane$status <- as.factor(dane$status)
+dane$ph.ecog <-as.factor(dane$ph.ecog)
+dane$ph.karno <- as.factor(dane$ph.karno)
+dane$sex <- as.factor(dane$sex)
+dane$pat.karno <- as.factor(dane$pat.karno)
+
+model_meal<-coxph(formula=Surv(time,status == 2) ~ age + sex + ph.ecog + ph.karno 
+                  + pat.karno + meal.cal + wt.loss , data = dane)
+#summary(model_meal)
+@
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ Zmienna  &  wartoœæ p \\ 
+ meal.cal &   0.8771    \\
+   \hline
+\end{tabular}
+\end{table}
+Widzimy, ¿e wartoœæ $p > 0.05$, dlatego zmienna w podanym modelu jest nieistotna i mo¿na j¹ odrzuciæ.
+
+\subsection{Zadanie 2 - Weryfikowanie istotnoœci zmiennej \textsl{pat.karno}}
+Zadanie jest podobne do powy¿ej podanej treœci (patrz zadanie 1 czêœæ 2) z ma³¹ zmienn¹ w postaci badanej zmiennej na \textsl{pat.karno}. Rozwa¿ymy równie¿ wykorzystanie funkcji \textsl{anova}.
+<<model_pat,echo=TRUE,warning=FALSE>>=
+model_pat<-coxph(formula=Surv(time,status == 2) ~ age + sex + ph.ecog + ph.karno
+                 + pat.karno + meal.cal + wt.loss , data = dane)
+#summary(model_pat)
+#anova(model_pat)
+@
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrr}
+  \hline
+ Zmienna  &  stopnie swobody & wartoœæ $Pr(>|Chi|)$ \\ 
+ pat.karno &   7  &  0.616093    \\
+   \hline
+\end{tabular}
+\end{table}
+Widzimy, ¿e wartoœæ p jest powy¿ej $0.05$, a wiêc znowu zmienna nie jest istotna w modelu i mo¿na j¹ usun¹æ. Widzimy równie¿ 7 stopni swobody, co oznacza iloœci parametrów kryj¹cych siê pod zmienn¹ \textsl{pat.karno}, pamiêtajmy ¿e jest to zmienna typu \textsl{factor}. SprawdŸmy na koniec co dzieje siê, gdy usuniemy zmienne \textsl{pat.karno} oraz \textsl{meal.call}, zrobimy to porównuj¹c model ze zmiennymi do modelu bez nich.
+<<model_porównanie,echo=TRUE,warning=FALSE>>=
+dane123 <- na.omit(dane)
+model_all<-coxph(formula=Surv(time,status == 2) ~ age + sex + ph.ecog + ph.karno
+                 + pat.karno + meal.cal + wt.loss , data = dane123)
+
+model_bez<-coxph(formula=Surv(time,status == 2) ~ age + sex + ph.ecog + ph.karno
+                 + wt.loss , data = dane123)
+
+anova(model_all, model_bez)
+@
+Widzimy, ¿e model ze zmiennymi odrzucamy, gdy¿ $p > 0/05$, mimo ¿e posiadana on a¿ 8 parametrów wiêcej, to nie wnosz¹ one do modelu na tyle by uznaæ je za istotne.
+\subsection{Zadanie 3 - Wybór zmiennych do modelu Coxa}
+\subsubsection{Kryterium informacyjne AIC}
+W tym zadaniu mamy dokonaæ wyboru najlepszego modelu liniowego logarytmu czasu korzystaj¹c z kryterium informacyjnego Akaike'a (AIC). Poni¿ej odpowiednie wartoœci (Coefficients), czyli zmienne i ich wartoœci buduj¹ce model:
+<<AIC,echo=TRUE,warning=FALSE>>=
+model_AIC <- coxph(Surv(time, status == 2) ~ sex + age + ph.ecog + 
+                 ph.karno + pat.karno + meal.cal
+                + wt.loss, data = dane123)
+step(model_AIC)
+@
+Ostatecznie charakterystykami tworz¹cymi model bêd¹: sex = 2, ca³e ph.ecog, wt.loss. Poni¿ej odpowiednie wartoœci tworz¹ce model dla tych zmiennych.
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ Zmienna  &  Coefficients  \\ 
+ $sex = 2$ &   -0.546262  \\
+ $ph.ecog = 1$ &   -0.546262  \\
+ $ph.ecog = 2 $&   0.385355  \\
+ $ph.ecog = 3 $&   2.202191  \\
+ $wt.loss$ &   -0.012451  \\
+   \hline
+\end{tabular}
+\end{table}
+\subsubsection{Kryterium informacyjne BIC}
+Ten podpunkt jest analogiczny co A, jednak tym razem skorzystamy z bayesowskiego kryterium informacyjnego (BIC) oraz z funkcji step. Poni¿ej odpowiednie wartoœci, nale¿y pamiêtaæ ¿e w funkcji step dla kryterium BIC wspisujemy liczbê czystych rekordów. Poni¿ej odpowiednie wartoœci (Coefficient):
+<<BIC,echo=TRUE,warning=FALSE>>=
+#dim(dane123)
+model_BIC <- coxph(Surv(time, status == 2) ~ sex + age + ph.ecog + 
+                 ph.karno + pat.karno + meal.cal
+                + wt.loss, data = dane123)
+#step(model_BIC, k = log(167))
+@
+Ostatni krok pokazuje, ¿e model zbudowany jest tylko sex = 2.
+\begin{table}[ht]
+\centering
+\begin{tabular}{rr}
+  \hline
+ Zmienna  &  Coefficients  \\ 
+ $sex = 2$ &   -0.4792  \\
+ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Zadanie 4 - Wykres funkcji hazardu i prze¿ycia dla modelu z kryterium AIC}
+ W tym zadaniu mamy narysowaæ wykres funkcji hazardu (zobacz rysunek \ref{F:hazard}) oraz funkcji pre¿ycia (zobacz rysunek \ref{F:przezycie}) bazuj¹c na modelu z zadania 3 po dokonaniu wyboru zmiennych z kryterium AIC. Nale¿y wspomnieæ, ¿e by³y to zmienne: \textsl{sex}, \textsl{ph.ecog}, \textsl{wt.loss}.
+<<wykres,echo=TRUE,warning=FALSE>>=
+model_AIC1 <- coxph(Surv(time, status == 2) ~ sex + 
+                      ph.ecog + wt.loss, data = dane123)
+new <- data.table(sex = factor(c(1,2)), ph.ecog = factor(c(2,2)),
+                  wt.loss = c(15,15))
+fit <- survfit(model_AIC1, newdata = new)
+@
+
+\begin{figure}[H]
+<<hazard,fig=TRUE,echo=FALSE, fig.cap='hazard'>>=
+#wykres hazardu
+plot(basehaz(model_AIC1, centered=TRUE), main = "Wykres hazardu")
+
+@
+\caption{Wykres funkcji hazardu}
+\label{F:hazard}
+\end{figure}
+
+\begin{figure}[H]
+<<przezyciesex,fig=TRUE,echo=FALSE, fig.cap='przezycie'>>=
+plot(fit, col = c("red", "blue"), xlab = "Dni", ylab = "Prawdopodobieñstwo",
+     main = "Wykres prze¿ycia z podzia³em na sex")
+legend("topright", legend = c("Male", "Female"), col = c("red", "blue"),
+       lty = 1:1, cex = 0.8)
+@
+\caption{Wykres prze¿ycia z podzia³em na zmienn¹ \textsl{sex}}
+\label{F:przezycie}
+\end{figure}
+
+\subsection{Zadanie 5 - Hipoteza o proporcjonalnoœci hazardów}
+Aby móc powiedziec, czy spe³nione jest za³o¿enie o proporcjonalnym hazardzie, u¿ywamy funkcji cox.zph. Funkcja ta : Testuje hipotezê zerow¹ $H_0$ o spe³nieniu za³ozeñ proporcjonalnego hazardu dla poszczególnych zmiennych objasniaj¹cych. Bêdziemy testowaæ model bez zmiennych pat.karno oraz meal.cal, gdy¿ w zadaniu pierwszym uznaliœmy, ¿e model bez nich jest lepszy.
+<<hipoteza,echo=TRUE,warning=FALSE>>=
+dane <- data.frame(lung)
+dane$status <- as.factor(dane$status)
+dane$ph.ecog <-as.factor(dane$ph.ecog)
+dane$ph.karno <- as.factor(dane$ph.karno)
+dane$sex <- as.factor(dane$sex)
+
+model<-coxph(formula=Surv(time,status == 2) ~ age + sex + ph.ecog + ph.karno
+             + wt.loss , data = dane)
+hipoteza <- cox.zph(model)
+hipoteza
+@
+Na podstawie uzyskanych danych, korzystaj¹c z testu Grambscha i Therneau’a, na poziomie istotnoœci 0.05, nie ma podstaw do odrzucenia hipotezy o proporcjonalnoœci hazardów w przyjêtym przez nas modelu. Wartoœæ poziomu krytycznego w tym teœcie wynosi $0.34$ . 
+\newline
+Funkcja cox.zph sprawdza za³o¿enie proporcjonalnoœci, u¿ywaj¹c reszt Schoenfelda wzglêdem czasu przekszta³conego. Bardzo ma³e wartoœci p wskazuj¹, ¿e istniej¹ wspó³czynniki zale¿ne od czasu, którymi nale¿y siê zaj¹æ. Oznacza to, ¿e za³o¿enie proporcjonalnoœci nie sprawdza liniowoœci - model Cox PH jest pó³parametryczny, a zatem nie przyjmuje ¿adnych za³o¿eñ co do formy zagro¿enia. Za³o¿eniem proporcjonalnoœci jest to, ¿e wspó³czynnik hazardu jednostki jest wzglêdnie sta³y w czasie i to w³aœnie testuje cox.zph.
+
+Jeœli zmienna towarzysz¹ca ³amie za³o¿enie, mo¿e wymagaæ naprawy, poniewa¿ istniej¹ wspó³czynniki zale¿ne od czasu. W podanym modelu ¿adna zmienna nie jest poni¿j przyjêtego poziomu p.
+\end{document}
